@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.2" halcon_version="20.11.1.2">
+<procedure name="main">
+<interface/>
+<body>
+<l>list_image_files('//mac/Home/Desktop/ComVis Project/data','default', [], ImageFiles)</l>
+<l>for Index := 0 to |ImageFiles|-1 by 1</l>
+<l>    read_image (Image,ImageFiles[Index])</l>
+<l>    decompose3 (Image, Image1, Image2, Image3)</l>
+<l>    threshold (Image1, Regions, 151, 255)</l>
+<l>    connection (Regions, ConnectedRegions)</l>
+<l>    select_shape (ConnectedRegions, SelectedRegions, 'area', 'and', 5800, 99999)</l>
+<l>    region_features(SelectedRegions,'area', area)</l>
+<l>    region_features(SelectedRegions,'roundness', roundness)</l>
+<l>    calculate_features (SelectedRegions,Image, 'hls_mean', Features)</l>
+<l>endfor</l>
+<c></c>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+</hdevelop>

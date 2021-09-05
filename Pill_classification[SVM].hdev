@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.2" halcon_version="20.11.1.2">
+<procedure name="main">
+<interface/>
+<body>
+<l>dev_close_window ()</l>
+<l>dev_update_off ()</l>
+<l>list_image_files('//mac/Home/Desktop/ComVis Project/data','default', [], ImageFiles)</l>
+<l>list_image_files('//mac/Home/Desktop/ComVis Project/test','default', [], ImageFiles1)</l>
+<l>read_image (Image, '//mac/Home/Desktop/ComVis Project/data/data000.jpg')</l>
+<l>dev_open_window_fit_image (Image, 0, 0, -1, -1, WindowHandle)</l>
+<l>dev_set_draw ('margin')</l>
+<l>dev_set_line_width (2)</l>
+<l>set_display_font (WindowHandle, 12, 'mono', 'true', 'false')</l>
+<l>PillNames := ['INDOCO','CHLORPHENIRAMINE','CEMOL','PONSTAN','IBUPROFEN']</l>
+<c>* Check, which features and feature groups are available</c>
+<l>query_feature_group_names (AvailableGroupNames)</l>
+<l>query_feature_names_by_group (AvailableGroupNames, AvailableFeatureNames, AvailableCorrespondingGroups)</l>
+<c>* Generate list of color and region features using the</c>
+<c>* calculate_feature_set library procedures.</c>
+<l>FeatureGroups := ['region']</l>
+<l>get_feature_names (FeatureGroups, FeatureNames)</l>
+<l>get_feature_lengths (FeatureNames, FeatureLengths)</l>
+<c>* Create and prepare classifier training data structure</c>
+<l>create_class_train_data (sum(FeatureLengths), ClassTrainDataHandle)</l>
+<l>set_feature_lengths_class_train_data (ClassTrainDataHandle, FeatureLengths, FeatureNames)</l>
+<l>area := []</l>
+<l>class := []</l>
+<c>* Training loops</c>
+<l>for Index := 0 to |ImageFiles|-1 by 1</l>
+<l>    read_image (Image,ImageFiles[Index])</l>
+<c>    * Segment pills in training image</c>
+<l>    segment_pills (Image, Pills)</l>
+<c>    * Display segmentation result</c>
+<l>    dev_display (Image)</l>
+<l>    dev_set_color ('white')</l>
+<l>    dev_display (Pills)</l>
+<l>    disp_message (WindowHandle, 'Collecting ' + PillNames[Index], 'window', 12, 12, 'black', 'true')</l>
+<c>    * Calculate features for all segmented pills and store</c>
+<c>    * them in the training data structure</c>
+<l>    count_obj (Pills, Number)</l>
+<l>    calculate_features (Pills, Image, FeatureNames, Features)</l>
+<l>    for I := 0 to Number-1 by 1</l>
+<l>        area := [area,Features[I]]</l>
+<l>        class := [class,0]</l>
+<l>    endfor</l>
+<l>    add_sample_class_train_data (ClassTrainDataHandle, 'feature_column', Features, Index)</l>
+<c>    * Visualize processed pills</c>
+<l>    GroupList := sum('\'' + FeatureGroups + '\' ')</l>
+<l>    Message := 'Calculate ' + |FeatureNames| + ' features from following feature groups:'</l>
+<l>    disp_message (WindowHandle, [Message, GroupList], 'window', 40, 12, 'black', 'true')</l>
+<l>    disp_continue_message (WindowHandle, 'black', 'true')</l>
+<l>    stop ()</l>
+<l>endfor</l>
+<c>* Automatically select suitable features from the training data</c>
+<l>disp_message (WindowHandle, 'Selecting optimal features...', 'window', 90, 12, 'black', 'true')</l>
+<l>select_feature_set_svm (ClassTrainDataHandle, 'greedy', [], [], SVMHandle, SelectedFeatures, Score)</l>
+<l>disp_message (WindowHandle, ['Selected:',SelectedFeatures], 'window', 120, 12, 'black', 'true')</l>
+<l>disp_continue_message (WindowHandle, 'black', 'true')</l>
+<l>stop ()</l>
+<c>* Classify pills in test images</c>
+<c>* using the automatically trained classifier with the</c>
+<c>* automatically selected features</c>
+<l>dev_set_line_width (2)</l>
+<l>dev_set_color ('green')</l>
+<l>for Index := 1 to |ImageFiles1| by 1</l>
+<c>    * Segment pills in test image</c>
+<l>    read_image (Image,ImageFiles1[Index-1])</l>
+<l>    dev_display (Image)</l>
+<l>    segment_pills (Image, Pills)</l>
+<c>    * For all pills, calculate selected features</c>
+<c>    * using the calculate_features procedure from the</c>
+<c>    * calculate_feature_set library and classify them.</c>
+<l>    PillsIDs := []</l>
+<l>    count_obj (Pills, NPills)</l>
+<l>    for P := 1 to NPills by 1</l>
+<l>        select_obj (Pills, PillSelected, P)</l>
+<l>        calculate_features (PillSelected, Image, SelectedFeatures, Features)</l>
+<l>        classify_class_svm (SVMHandle, real(Features), 1, Class)</l>
+<l>        PillsIDs := [PillsIDs,Class]</l>
+<l>        dev_display (PillSelected)</l>
+<l>        area_center (PillSelected, Area, Row, Column)</l>
+<l>        disp_message (WindowHandle, PillNames[Class], 'image', Row, Column, 'black', 'true')</l>
+<l>    endfor</l>
+<l>    disp_message (WindowHandle, 'Classify image ' + Index + ' of 5 using following features:', 'window', 12, 12, 'black', 'true')</l>
+<l>    disp_message (WindowHandle, SelectedFeatures, 'window', 40, 12, 'black', 'true')</l>
+<l>    if (Index &lt; 5)</l>
+<l>        disp_continue_message (WindowHandle, 'black', 'true')</l>
+<l>        stop ()</l>
+<l>    endif</l>
+<l>endfor</l>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="segment_pills">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="Pills" base_type="iconic" dimension="0"/>
+</oo>
+</interface>
+<body>
+<c>* Segment pills based on red and blue channel</c>
+<l>decompose3 (Image, Image1, Image2, Image3)</l>
+<l>threshold (Image1, Regions, 151, 255)</l>
+<l>connection (Regions, ConnectedRegions)</l>
+<c></c>
+<l>fill_up (ConnectedRegions, Pills)</l>
+<l>return ()</l>
+</body>
+<docu id="segment_pills">
+<parameters>
+<parameter id="Image"/>
+<parameter id="Pills"/>
+</parameters>
+</docu>
+</procedure>
+</hdevelop>
